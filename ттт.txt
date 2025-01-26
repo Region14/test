@@ -1,36 +1,43 @@
-import sys
-import time
 import requests
 from termcolor import colored
 from tabulate import tabulate
 import numpy as np
+import requests
+import time
 
-# Анімація тексту
+# Функція для отримання поточної ціни XRP
+def get_current_price():
+    url = "https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT"
+    response = requests.get(url)
+    data = response.json()
+    return float(data['price'])
 
-def typing_effect(text, delay=0.1):
-    for char in text:
-        sys.stdout.write(char)
-        sys.stdout.flush()
-        time.sleep(delay)
-    print()  # Для переходу на новий рядок
+# Анімація
+def display_animation():
+    animation = ["|", "/", "-", "\\"]
+    print("Запуск аналізу ринку", end="")
+    for i in range(10):
+        print(f"\rЗапуск аналізу ринку {animation[i % len(animation)]}", end="")
+        time.sleep(0.2)
+    print("\rЗапуск аналізу ринку завершено!       ")
 
-def blinking_text(text, blink_times=3):
-    for _ in range(blink_times):
-        sys.stdout.write("\r" + text)
-        sys.stdout.flush()
-        time.sleep(0.5)
-        sys.stdout.write("\r" + " " * len(text))  # Очищуємо текст
-        sys.stdout.flush()
-        time.sleep(0.5)
-    print()  # Для переходу на новий рядок
+# Основна функція
+def main():
+    display_animation()  # Анімація перед запуском
 
-def animated_typing_and_blinking(text, typing_delay=0.1, blink_times=3, blink_delay=0.5):
-    typing_effect(text, typing_delay)
-    blinking_text(text, blink_times)
+    try:
+        # Отримання поточної ціни
+        current_price = get_current_price()
+        print(f"Поточна ціна: ${current_price:.2f}")
+        # Додатковий код для аналізу...
+    except Exception as e:
+        print(f"Помилка: {e}")
+
+if __name__ == "__main__":
+    main()
 
 # Отримання поточної ціни XRP з Binance API
 def get_current_price():
-    animated_typing_and_blinking("Отримуємо поточну ціну XRP з Binance...", typing_delay=0.05, blink_times=3)
     url = "https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT"
     response = requests.get(url)
     data = response.json()
@@ -38,7 +45,6 @@ def get_current_price():
 
 # Отримання історичних даних про XRP з Binance API
 def get_xrp_data(interval, limit):
-    animated_typing_and_blinking(f"Завантаження історичних даних ({interval})...", typing_delay=0.05, blink_times=3)
     url = f"https://api.binance.com/api/v3/klines?symbol=XRPUSDT&interval={interval}&limit={limit}"
     response = requests.get(url)
     data = response.json()
@@ -49,7 +55,6 @@ def get_xrp_data(interval, limit):
 
 # Розрахунок індикаторів
 def calculate_indicators(prices, highs, lows):
-    animated_typing_and_blinking("Розрахунок індикаторів...", typing_delay=0.05, blink_times=3)
     indicators = {}
 
     # Проста ковзна середня (SMA)
@@ -136,7 +141,6 @@ def calculate_indicators(prices, highs, lows):
 
 # Форматування даних для горизонтальної таблиці
 def format_horizontal_table(indicators_15m, indicators_1h, indicators_4h, indicators_1d):
-    animated_typing_and_blinking("Форматування таблиць для виводу...", typing_delay=0.05, blink_times=3)
     green_bg_white_text = "\033[42m\033[37m"  # Зелений фон, білий текст
     reset_formatting = "\033[0m"  # Скидання форматування
 
@@ -153,33 +157,68 @@ def format_horizontal_table(indicators_15m, indicators_1h, indicators_4h, indica
         ["Параметр", "15 хвилин", "1 година", "4 години", "1 день"],
         ["Support", f"{indicators_15m['Support']:.2f}", f"{indicators_1h['Support']:.2f}", f"{indicators_4h['Support']:.2f}", f"{indicators_1d['Support']:.2f}"],
         ["Resistance", f"{indicators_15m['Resistance']:.2f}", f"{indicators_1h['Resistance']:.2f}", f"{indicators_4h['Resistance']:.2f}", f"{indicators_1d['Resistance']:.2f}"],
-        ["Market Trend", highlight_trend(indicators_15m['Market Trend']), highlight_trend(indicators_1h['Market Trend']), highlight_trend(indicators_4h['Market Trend']), highlight_trend(indicators_1d['Market Trend'])]
+        ["Тренд ринку", highlight_trend(indicators_15m['Market Trend']), highlight_trend(indicators_1h['Market Trend']), highlight_trend(indicators_4h['Market Trend']), highlight_trend(indicators_1d['Market Trend'])]
     ]
-    
-    table = tabulate(table_data, headers="firstrow", tablefmt="grid")
-    return table
+    table = tabulate(table_data, headers="firstrow", tablefmt="fancy_grid")
+
+    # Таблиця рівнів Фібоначчі
+    fibonacci_table = tabulate(
+        [[level['Level'] for level in indicators_1d['Fibonacci']],
+         [f"{level['Value']:.2f}" for level in indicators_1d['Fibonacci']]],
+        tablefmt="grid"
+    )
+
+    return table, fibonacci_table
+
+# Генерація звіту з висновками та таблицею
+def generate_report(current_price, indicators_15m, indicators_1h, indicators_4h, indicators_1d):
+    print(colored(f"\nПоточна ціна: ${current_price:.2f}", "cyan"))
+
+    # Висновки на основі індикаторів
+    print("\nВисновки:")
+    if indicators_1h['RSI'] > 80 or indicators_1d['RSI'] > 80:
+        print(colored("Ринок перекуплений (RSI > 80). Можливий розворот вниз.", "yellow"))
+    if indicators_1h['RSI'] < 20 or indicators_1d['RSI'] < 20:
+        print(colored("Ринок перепроданий (RSI < 20). Можливий відскок вгору.", "yellow"))
+    if indicators_1h['EMA'] > indicators_1h['SMA'] and indicators_1d['EMA'] > indicators_1d['SMA']:
+        print(colored("Ціна у висхідному тренді (EMA > SMA).", "green"))
+    if indicators_1h['EMA'] < indicators_1h['SMA'] and indicators_1d['EMA'] < indicators_1d['SMA']:
+        print(colored("Ціна у низхідному тренді (EMA < SMA).", "red"))
+
+    # Формування та друк таблиці
+    table, fibonacci_table = format_horizontal_table(indicators_15m, indicators_1h, indicators_4h, indicators_1d)
+    print(colored("\nТаблиця підтримки, опору та тренду:", "green"))
+    print(table)
+    print(colored("\nРівні Фібоначчі (1 день):", "green"))
+    print(fibonacci_table)
 
 # Основна функція
 def main():
-    interval_15m = "15m"
-    interval_1h = "1h"
-    interval_4h = "4h"
-    interval_1d = "1d"
-    limit = 100
+    try:
+        # Отримання поточної ціни
+        current_price = get_current_price()
 
-    prices_15m, highs_15m, lows_15m = get_xrp_data(interval_15m, limit)
-    prices_1h, highs_1h, lows_1h = get_xrp_data(interval_1h, limit)
-    prices_4h, highs_4h, lows_4h = get_xrp_data(interval_4h, limit)
-    prices_1d, highs_1d, lows_1d = get_xrp_data(interval_1d, limit)
+        # Аналіз для таймфрейму 15 хвилин
+        prices_15m, highs_15m, lows_15m = get_xrp_data("15m", 96)
+        indicators_15m = calculate_indicators(prices_15m, highs_15m, lows_15m)
 
-    indicators_15m = calculate_indicators(prices_15m, highs_15m, lows_15m)
-    indicators_1h = calculate_indicators(prices_1h, highs_1h, lows_1h)
-    indicators_4h = calculate_indicators(prices_4h, highs_4h, lows_4h)
-    indicators_1d = calculate_indicators(prices_1d, highs_1d, lows_1d)
+        # Аналіз для таймфрейму 1 година
+        prices_1h, highs_1h, lows_1h = get_xrp_data("1h", 24)
+        indicators_1h = calculate_indicators(prices_1h, highs_1h, lows_1h)
 
-    table = format_horizontal_table(indicators_15m, indicators_1h, indicators_4h, indicators_1d)
-    
-    print(table)
+        # Аналіз для таймфрейму 4 години
+        prices_4h, highs_4h, lows_4h = get_xrp_data("4h", 24)
+        indicators_4h = calculate_indicators(prices_4h, highs_4h, lows_4h)
+
+        # Аналіз для таймфрейму 1 день
+        prices_1d, highs_1d, lows_1d = get_xrp_data("1d", 30)
+        indicators_1d = calculate_indicators(prices_1d, highs_1d, lows_1d)
+
+        # Генерація звіту
+        generate_report(current_price, indicators_15m, indicators_1h, indicators_4h, indicators_1d)
+
+    except Exception as e:
+        print(f"Помилка: {e}")
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-import requests
+mport requests
 from termcolor import colored
 from tabulate import tabulate
 import numpy as np
